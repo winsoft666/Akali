@@ -58,7 +58,7 @@ class AKALI_API RegKey {
   HRESULT GetSZValue(LPCWSTR pszValueName, OUT std::wstring& strValue) const;
   HRESULT GetExpandSZValue(LPCWSTR pszValueName, bool bRetrieveExpandedString, OUT std::wstring& strValue) const;
   HRESULT GetMultiSZValue(LPCWSTR pszValueName, OUT std::vector<std::wstring>& vStrValues) const;
-  int GetValueBufferSize(LPCWSTR pszValueName) const;
+  DWORD GetValueBufferSize(LPCWSTR pszValueName) const;
   HRESULT SetDWORDValue(LPCWSTR pszValueName, DWORD dwData);
   HRESULT SetBINARYValue(LPCWSTR pszValueName, const LPBYTE pbData, int cbData);
   HRESULT SetSZValue(LPCWSTR pszValueName, const std::wstring& strData);

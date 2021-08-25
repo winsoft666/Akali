@@ -192,20 +192,21 @@ HRESULT RegKey::GetBINARYValue(LPCWSTR pszValueName, LPBYTE pbDataOut, int cbDat
 
 HRESULT RegKey::GetSZValue(LPCWSTR pszValueName, OUT std::wstring& strValue) const {
   HRESULT hr = E_FAIL;
-  int cb = GetValueBufferSize(pszValueName);
+  DWORD cb = GetValueBufferSize(pszValueName);
 
-  if (cb <= 0)
+  if (cb == 0)
     return hr;
 
-  WCHAR* szTemp = new WCHAR[cb / sizeof(WCHAR)];
-  memset(szTemp, 0, cb);
+  WCHAR* pTemp = (WCHAR*)malloc(cb + sizeof(WCHAR));
+  if (!pTemp)
+    return E_OUTOFMEMORY;
+  memset(pTemp, 0, cb + sizeof(WCHAR));
 
-  if (NULL != szTemp && 0 < cb) {
-    hr = GetValue(pszValueName, REG_SZ, (LPBYTE)szTemp, cb);
-  }
+  hr = GetValue(pszValueName, REG_SZ, (LPBYTE)pTemp, cb);
+  if (hr == S_OK)
+    strValue = pTemp;
 
-  strValue = szTemp;
-  SAFE_DELETE_ARRAY(szTemp);
+  SAFE_FREE(pTemp);
 
   return hr;
 }
@@ -252,29 +253,34 @@ HRESULT RegKey::GetExpandSZValue(LPCWSTR pszValueName,
 HRESULT RegKey::GetMultiSZValue(LPCWSTR pszValueName,
                                 OUT std::vector<std::wstring>& vStrValues) const {
   HRESULT hr = E_FAIL;
-  int cb = GetValueBufferSize(pszValueName);
-  WCHAR* szTemp = new WCHAR[cb / sizeof(WCHAR)];
-  WCHAR* szBegin = szTemp;
+  DWORD cb = GetValueBufferSize(pszValueName);
 
-  if (NULL != szTemp && 0 < cb) {
-    hr = GetValue(pszValueName, REG_MULTI_SZ, (LPBYTE)szTemp, cb);
+  if (cb == 0)
+    return hr;
 
-    if (SUCCEEDED(hr)) {
-      while (szTemp && TEXT('\0') != *szTemp) {
-        vStrValues.push_back(std::wstring(szTemp));
-        szTemp += lstrlen(szTemp) + 1;
-      }
+  WCHAR* pTemp = (WCHAR*)malloc(cb + sizeof(WCHAR));
+  if (!pTemp)
+    return E_OUTOFMEMORY;
+
+  memset(pTemp, 0, cb + sizeof(WCHAR));
+  WCHAR* pBegin = pTemp;
+
+  hr = GetValue(pszValueName, REG_MULTI_SZ, (LPBYTE)pTemp, cb);
+  if (SUCCEEDED(hr)) {
+    while (pTemp && TEXT('\0') != *pTemp) {
+      vStrValues.push_back(std::wstring(pTemp));
+      pTemp += lstrlen(pTemp) + 1;
     }
   }
 
-  SAFE_DELETE_ARRAY(szBegin);
+  SAFE_FREE(pBegin);
 
   return hr;
 }
 
-int RegKey::GetValueBufferSize(LPCWSTR pszValueName) const {
+DWORD RegKey::GetValueBufferSize(LPCWSTR pszValueName) const {
   DWORD dwType;
-  int cbData = 0;
+  DWORD cbData = 0;
   DWORD dwResult = RegQueryValueExW(m_hkey, pszValueName, 0, &dwType, NULL, (LPDWORD)&cbData);
   return cbData;
 }
